@@ -281,10 +281,14 @@ def cmd_publish_github():
 
     print(f"Publishing '{name}' to GitHub ({visibility})...")
     flag = f"--{visibility}"
-    result = subprocess.run(
-        ["gh", "repo", "create", name, flag, "--source=.", "--remote=origin", "--push"],
-        cwd=root
-    )
+    try:
+        result = subprocess.run(
+            ["gh", "repo", "create", name, flag, "--source=.", "--remote=origin", "--push"],
+            cwd=root
+        )
+    except FileNotFoundError:
+        print("'gh' CLI not found. Install it from https://cli.github.com/ and try again.")
+        return
     if result.returncode != 0:
         print("GitHub publish failed. Check 'gh' CLI authentication and try again.")
     else:

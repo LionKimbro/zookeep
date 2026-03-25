@@ -1,0 +1,117 @@
+{
+  "document": {
+    "document-id": "zookeep.project-ecology.support-burdens.v1",
+    "title": "Zookeep Project Ecology Support Burdens",
+    "tags": [
+      "zookeep",
+      "burdens",
+      "checklist",
+      "inspection",
+      "repository",
+      "project-ecology",
+      "python",
+      "registry"
+    ],
+    "purpose": "Describe the burdens and support responsibilities that zookeep should carry in order to support a Lion-style project ecology.",
+    "author": [
+      "Lion Kimbro",
+      "Wing-Cat (Chat-GPT)"
+    ],
+    "status": "draft",
+    "version": "v1",
+    "conversation": null
+  },
+  "overview": {
+    "burdens": "These burdens are the kinds of support work zookeep should perform when creating, inspecting, or tending a project.",
+    "character": "Some of these are creation burdens, some are inspection burdens, and some are advisory burdens.",
+    "non-comprehensive": "This is not comprenehsive, not total.  Take it as suggestive, rather than a complete description.  But these things should all be in the final tool.",
+    "goal": "The goal is to help projects come into being well and remain coherent over time."
+  },
+  "burdens": {
+    "repository-structure-support": [
+      "Recognize whether a project has a docs/ directory.",
+      "Recognize whether a project has a src/ directory in the conventional Python package layout.",
+      "Recognize whether a project has a pyproject.toml file when the project is an organized Python package project.",
+      "Recognize whether a project has a README.md file.",
+      "Recognize whether a project has a .gitignore file."
+    ],
+    "docs-support": [
+      "Recognize the raw document convention using numbered filenames such as 0000__name.json.",
+      "Inspect whether raw documents appear to follow the expected numbering pattern.",
+      "Treat the raw documents as the primary source documents.",
+      "Understand that projected documentation areas may exist or may be planned, even if projection is not yet implemented.",
+      "Be able to reason about possible future projection rules based on tags, semantic types, semantic base types, or combinations of these."
+    ],
+    "docs-projection-support": [
+      "Support the concept that raw documents may be projected into other documentation views or directories.",
+      "Be able to describe or validate likely projection destinations such as spec or reference areas.",
+      "Understand that projected outputs may be generated artifacts rather than primary authored sources.",
+      "Coordinate with .gitignore expectations so generated projected outputs can be ignored while raw documents remain tracked."
+    ],
+    "python-project-support": [
+      "Distinguish between a minimal loose Python project and a full organized Python package project.",
+      "For organized package projects, expect pyproject.toml and src/package-name/ style layout.",
+      "Allow for projects that define scripts or entry points.",
+      "Allow for projects that do not define scripts or entry points."
+    ],
+    "registry-support": [
+      "Accept a configured location for registry.json.",
+      "Understand that registry.json is usually external to the repository.",
+      "Treat registry.json as a librarian2 registry file.",
+      "Inspect whether the configured registry location exists.",
+      "Inspect whether the registry file is readable and structurally valid enough to use.",
+      "Inspect whether the registry contains entries for core external resources needed by the project ecology."
+    ],
+    "external-resource-support": [
+      "Check whether JSON standards documents are present in the registry.",
+      "Check whether those documents are identifiable by stable identifier.",
+      "Check whether the personal dictionary is present in the registry.",
+      "Respect the rule that the personal dictionary should not be automatically loaded by default."
+    ],
+    "inspection-support": [
+      "Inspect both repository-local structure and ecology-external references.",
+      "Report missing expected files or directories.",
+      "Report missing expected registry links.",
+      "Report uncertainty clearly when a feature is aspirational, planned, or only partially implemented."
+    ],
+    "advisory-support": [
+      "Explain what appears healthy or coherent in the repository ecology.",
+      "Explain what appears absent or weak.",
+      "Describe likely next steps without pretending that unimplemented systems already exist.",
+      "Respect variation across different breeds of project directory."
+    ]
+  },
+  "checklists": {
+    "repository-checklist": [
+      "docs/ exists",
+      "src/ exists when expected",
+      "pyproject.toml exists when expected",
+      "README.md exists",
+      ".gitignore exists"
+    ],
+    "docs-checklist": [
+      "raw document area exists",
+      "raw documents follow numbered naming convention",
+      "raw documents are treated as source documents",
+      "projection expectations are known",
+      ".gitignore aligns with projection strategy"
+    ],
+    "registry-checklist": [
+      "registry location is configured",
+      "registry file exists",
+      "registry file is readable",
+      "registry contains core referenced documents by identifier"
+    ],
+    "external-resource-checklist": [
+      "JSON standards documents are discoverable through registry",
+      "personal dictionary is discoverable through registry",
+      "personal dictionary is not auto-loaded by default"
+    ]
+  },
+  "important-restraints": {
+    "do-not-pretend": "zookeep should not pretend that the docs projection system already exists in finished form.",
+    "do-not-over-assume": "zookeep should not assume that all Python projects are fully packaged projects.",
+    "do-not-auto-load-dictionary": "zookeep should not automatically load the personal dictionary by default.",
+    "respect-variation": "zookeep should support recognizable form without forcing every project into exactly one shape."
+  }
+}

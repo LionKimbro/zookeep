@@ -1,0 +1,55 @@
+{
+  "document": {
+    "document-id": "zookeep.vision-spec.v1",
+    "title": "Zookeep Vision Specification",
+    "tags": [
+      "zookeep",
+      "vision",
+      "repositories",
+      "git",
+      "github",
+      "tooling",
+      "llm"
+    ],
+    "purpose": "Describe the basic vision, mission, and outline of zookeep.",
+    "author": [
+      "Lion Kimbro",
+      "ChatGPT"
+    ],
+    "status": "draft",
+    "version": "v1",
+    "development": "https://chatgpt.com/c/69c23e8d-888c-83e8-b502-5fe75df75065"
+  },
+  "vision": {
+    "basic": "zookeep is a system for helping software projects come into being as repositories and helping keep them healthy and understandable over time.",
+    "consistency": "It should help projects have recognizable form without forcing every project into the same shape.",
+    "change": "It should help repositories stay coherent while still allowing mutation, growth, and the appearance of new breeds of project directory.",
+    "ai": "It should be usable by both people and AI agents."
+  },
+  "mission": {
+    "basic": "Make it easier to start repository-based software projects well.",
+    "care": "Help keep repositories in good condition over time.",
+    "inspection": "Inspect repositories and point out strengths, weaknesses, and missing structure.",
+    "breeds": "Support different breeds of project directory rather than assuming one universal layout."
+  },
+  "outline": {
+    "what-it-is": [
+      "A system for creating repository-based software projects.",
+      "A system for inspecting and tending repositories over time.",
+      "A tool that supports both creation and ongoing care.",
+      "A tool that can work through CLI, GUI, or AI-driven use."
+    ],
+    "what-it-does": [
+      "Helps manifest projects as repositories.",
+      "Helps establish structure and identity.",
+      "Helps inspect repository condition.",
+      "Helps support consistency without blocking development and change."
+    ],
+    "what-it-is-not": [
+      "It is not the general zoo of all project forms.",
+      "It is not a build system.",
+      "It is not a replacement for git.",
+      "It is not a universal project manager."
+    ]
+  }
+}

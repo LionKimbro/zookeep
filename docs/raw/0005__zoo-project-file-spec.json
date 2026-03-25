@@ -1,0 +1,92 @@
+{
+  "document": {
+    "document-id": "zookeep.zoo-project-file.spec.v1",
+    "title": "Zoo Project File Specification",
+    "tags": [
+      "zookeep",
+      "project",
+      "spec",
+      "configuration",
+      "identity"
+    ],
+    "purpose": "Define the structure and role of zoo-project.json, a lightweight project definition file used by zookeep and related tools.",
+    "author": [
+      "Lion Kimbro",
+      "ChatGPT"
+    ],
+    "status": "draft",
+    "version": "v1"
+  },
+  "overview": {
+    "basic": "The zoo-project.json file defines basic identity and preferences for a project. It is optional, human-readable, and designed to assist tools without being required for operation.",
+    "location": "Typically located at the root of the project repository.",
+    "character": [
+      "Portable and versioned.",
+      "Readable and editable by humans and LLMs.",
+      "Used to guide tools, not to constrain them."
+    ]
+  },
+  "design-principles": {
+    "optional": "The file is not required for project operation. Tools must function without it.",
+    "lightweight": "The file should remain small and simple.",
+    "declarative": "It describes what the project is, not how tools should behave internally.",
+    "extensible": "New fields may be added over time without breaking existing usage.",
+    "non-authoritative": "Tools may override or ignore fields if necessary; this file is guidance, not enforcement."
+  },
+  "schema": {
+    "name": {
+      "type": "string",
+      "required": false,
+      "description": "An identifier for the project.",
+      "acceptance-regex": "[a-zA-Z0-0_-]+"
+    },
+    "repo-type": {
+      "type": "string",
+      "required": false,
+      "description": "an indicator of what breed of repository this is",
+      "possible-values": [
+        "python-2026-03"
+      ]
+    },
+    "license": {
+      "type": "string",
+      "required": false,
+      "description": "Preferred license identifier (e.g., MIT, Apache-2.0). Used by tools when generating LICENSE files."
+    },
+    "repository": {
+      "type": "object",
+      "required": false,
+      "description": "Preferences related to repository hosting.",
+      "fields": {
+        "name": {
+          "type": "string",
+          "required": false,
+          "description": "Repository name, if different from project name."
+        },
+        "visibility": {
+          "type": "string",
+          "required": false,
+          "values": [
+            "public",
+            "private"
+          ],
+          "description": "Preferred visibility when creating a remote repository."
+        }
+      }
+    },
+    "project-ref": {
+      "type": "string",
+      "required": false,
+      "description": "A reference to the project (Zoo) this repository belongs to, expressed as a GUID or tag URI."
+    }
+  },
+  "tooling-usage": {
+    "basic": "Tools may use zoo-project.json to guide behavior.",
+    "examples": [
+      "init-git may use the license field to generate a LICENSE file.",
+      "publish-github may use repository fields to name and configure the repository.",
+      "README generation may use name and description."
+    ],
+    "constraint": "Tools must not require this file and must operate sensibly when it is absent."
+  }
+}

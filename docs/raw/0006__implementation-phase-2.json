@@ -1,0 +1,105 @@
+{
+  "document": {
+    "document-id": "zookeep.implementation.phase-2",
+    "title": "Zookeep Implementation Phase 2",
+    "tags": [
+      "zookeep",
+      "implementation",
+      "phase-2",
+      "git",
+      "github",
+      "cli"
+    ],
+    "purpose": "Define the second phase of zookeep implementation, adding git initialization and GitHub publishing capabilities.",
+    "author": [
+      "Lion Kimbro",
+      "ChatGPT"
+    ],
+    "status": "draft",
+    "version": "v1"
+  },
+
+  "overview": {
+    "basic": "Phase 2 extends zookeep from inspection into action by enabling repository initialization and publication to GitHub.",
+    "focus": [
+      "Create and prepare a local git repository.",
+      "Publish the repository to GitHub."
+    ],
+    "constraint": "Keep behavior simple, explicit, and safe."
+  },
+
+  "commands": {
+    "init-git": {
+      "basic": "Initialize a git repository in the current project.",
+      "behavior": [
+        "Check if a .git directory exists.",
+        "If not present, run git init.",
+        "If present, report that the repository already exists."
+      ],
+      "file-creation": {
+        ".gitignore": {
+          "condition": "If not present",
+          "behavior": "Create a default .gitignore file.",
+          "notes": [
+            "Should include common Python ignores.",
+            "Should include .local/ and zookeeper-report.json."
+          ]
+        },
+        "LICENSE": {
+          "condition": "If not present",
+          "behavior": [
+            "If zoo-project.json contains a license field, generate LICENSE file accordingly.",
+            "Otherwise, skip or optionally warn."
+          ]
+        },
+        "README.md": {
+          "condition": "If not present",
+          "behavior": "Create a minimal README file."
+        }
+      },
+      "commit": {
+        "basic": "Optionally create an initial commit.",
+        "behavior": [
+          "Stage all files.",
+          "Create initial commit with message such as 'Initial commit'."
+        ]
+      }
+    },
+
+    "publish-github": {
+      "basic": "Publish the local repository to GitHub.",
+      "preconditions": [
+        "A git repository must already exist."
+      ],
+      "failure-mode": {
+        "no-git": "If no git repository is present, instruct the user to run 'zookeep init-git'."
+      },
+      "behavior": [
+        "Determine repository name (from zoo-project.json if available, otherwise directory name).",
+        "Create a GitHub repository (via CLI or API).",
+        "Add remote origin.",
+        "Push current branch to GitHub."
+      ],
+      "notes": [
+        "Authentication is handled externally (e.g. gh CLI or existing credentials).",
+        "Do not attempt to solve all edge cases.",
+        "Prefer clear failure over hidden behavior."
+      ]
+    }
+  },
+
+  "behavioral-notes": {
+    "explicit": "Commands should not perform hidden actions across conceptual boundaries.",
+    "safe": "Do not overwrite existing files.",
+    "guided": "When failing, provide clear next steps.",
+    "minimal": "Implement only the core happy path."
+  },
+
+  "non-goals": [
+    "No advanced git configuration.",
+    "No branch management.",
+    "No GitHub organization handling.",
+    "No authentication management.",
+    "No project normalization."
+  }
+}

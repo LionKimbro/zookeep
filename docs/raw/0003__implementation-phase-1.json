@@ -1,0 +1,198 @@
+{
+  "document": {
+    "document-id": "zookeep.implementation.phase-1",
+    "title": "Zookeep Implementation Phase 1",
+    "tags": [
+      "zookeep",
+      "implementation",
+      "phase-1",
+      "inspection",
+      "cli",
+      "lionscliapp"
+    ],
+    "purpose": "Define the first working implementation of zookeep, focused on basic inspection of a local project ecology and producing a JSON report.",
+    "author": [
+      "Lion Kimbro",
+      "ChatGPT"
+    ],
+    "status": "draft",
+    "version": "v1"
+  },
+  "overview": {
+    "basic": "Phase 1 establishes a minimal but real zookeep tool that can inspect a local project directory and produce a structured JSON report describing its ecology.",
+    "constraints": [
+      "Must be simple and directly buildable.",
+      "Must not assume unimplemented systems (such as docs projection).",
+      "Must operate entirely on the local filesystem.",
+      "Must integrate with lionscliapp."
+    ]
+  },
+  "platform": {
+    "cli-framework": {
+      "name": "lionscliapp",
+      "requirements": [
+        "Use lionscliapp for command dispatch.",
+        "Use lionscliapp context (ctx) for configuration if needed.",
+        "Support running from project root or subdirectory (using execroot behavior if available)."
+      ]
+    }
+  },
+  "commands": {
+    "inspect": {
+      "basic": "Inspect the local project ecology and produce a JSON report.",
+      "invocation": "zookeep inspect",
+      "behavior": [
+        "Determine the project root directory.",
+        "Inspect repository structure.",
+        "Inspect selected ecology signals.",
+        "Generate a report object.",
+        "Write the report to zookeeper-report.json in the project root."
+      ]
+    }
+  },
+  "inspection": {
+    "repository": {
+      "files": [
+        {
+          "name": "docs/",
+          "check": "exists",
+          "type": "directory"
+        },
+        {
+          "name": "src/",
+          "check": "exists",
+          "type": "directory"
+        },
+        {
+          "name": "pyproject.toml",
+          "check": "exists",
+          "type": "file"
+        },
+        {
+          "name": "README.md",
+          "check": "exists",
+          "type": "file"
+        },
+        {
+          "name": ".gitignore",
+          "check": "exists",
+          "type": "file"
+        }
+      ]
+    },
+    "docs": {
+      "raw-documents": {
+        "location": "docs/",
+        "checks": [
+          "Detect files matching pattern ####__*.json",
+          "Count matching files",
+          "List first N (e.g. 5) filenames"
+        ],
+        "notes": "Do not assume docs/raw/ exists; operate on docs/ as-is."
+      }
+    },
+    "gitignore": {
+      "checks": [
+        {
+          "target": "zookeeper-report.json",
+          "description": "Check whether zookeeper-report.json is ignored by .gitignore",
+          "method": "simple string match or pattern match against .gitignore contents"
+        }
+      ]
+    },
+    "dot-directories": {
+      "checks": [
+        {
+          "name": ".focus-explorer",
+          "exists": true
+        },
+        {
+          "name": ".pycard",
+          "exists": true
+        },
+        {
+          "name": ".librarian2",
+          "exists": true
+        }
+      ],
+      "notes": "These are treated as signals of ecology/tool usage."
+    },
+    "registry": {
+      "basic": "Registry inspection is minimal in phase 1.",
+      "checks": [
+        "If a registry path is provided via configuration, check if file exists.",
+        "Do not parse deeply.",
+        "Record presence or absence only."
+      ]
+    }
+  },
+  "report": {
+    "output-file": "zookeeper-report.json",
+    "format": {
+      "basic": "The report is a JSON object describing inspection results.",
+      "top-level-keys": [
+        "project-root",
+        "repository",
+        "docs",
+        "gitignore",
+        "dot-directories",
+        "registry",
+        "timestamp"
+      ]
+    },
+    "example-structure": {
+      "project-root": "/path/to/project",
+      "repository": {
+        "docs": true,
+        "src": true,
+        "pyproject.toml": false,
+        "README.md": true,
+        ".gitignore": true
+      },
+      "docs": {
+        "raw-document-count": 3,
+        "sample-files": [
+          "0000__example.json",
+          "0001__next.json"
+        ]
+      },
+      "gitignore": {
+        "exists": true,
+        "zookeeper-report.json-ignored": false
+      },
+      "dot-directories": {
+        ".focus-explorer": false,
+        ".pycard": true,
+        ".librarian2": false
+      },
+      "registry": {
+        "configured": false,
+        "exists": false
+      },
+      "timestamp": "ISO-8601 string"
+    }
+  },
+  "behavioral-notes": {
+    "non-destructive": "Inspection must not modify any files except writing zookeeper-report.json.",
+    "idempotent": "Running inspect multiple times should overwrite the report cleanly.",
+    "graceful-failure": "Missing files or directories should not cause crashes; they should be reported as absent.",
+    "scope": "Do not attempt deep semantic analysis in phase 1."
+  },
+  "non-goals": [
+    "No docs projection implementation.",
+    "No deep registry parsing.",
+    "No enforcement or mutation of repository structure.",
+    "No scoring or judgment system.",
+    "No GUI."
+  ],
+  "next-extensions": {
+    "possible": [
+      "Richer registry inspection.",
+      "Validation of JSON document structure.",
+      "Detection of projection outputs.",
+      "Scoring or health indicators.",
+      "CLI output formatting in addition to JSON."
+    ],
+    "note": "These are not part of phase 1."
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m zookeep inspect)",
+      "Bash(python -m pip install -e .)",
+      "Bash(python -m zookeep clean)",
+      "Bash(python -m zookeep help)"
+    ]
+  }
+}

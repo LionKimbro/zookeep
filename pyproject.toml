@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "zookeep"
+version = "0.1.0"
+description = "Inspect and tend software project ecologies."
+requires-python = ">=3.10"
+authors = [
+    {name = "Lion Kimbro", email = "lionkimbro@gmail.com"}
+]
+license = {text = "CC0-1.0"}
+dependencies = [
+    "lionscliapp",
+]
+
+[project.scripts]
+zookeep = "zookeep.__main__:_entry"
+
+[tool.setuptools.packages.find]
+where = ["src"]

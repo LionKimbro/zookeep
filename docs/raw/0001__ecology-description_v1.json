@@ -1,0 +1,140 @@
+{
+  "document": {
+    "document-id": "zookeep.project-ecology.description.v1",
+    "title": "Zookeep Project Ecology Description",
+    "tags": [
+      "zookeep",
+      "project-ecology",
+      "repository",
+      "python",
+      "docs",
+      "registry",
+      "librarian2",
+      "json",
+      "standards"
+    ],
+    "purpose": "Describe the major features of a typical Lion-style project ecology, including both repository structure and the surrounding document ecology used by the project.",
+    "author": [
+      "Lion Kimbro",
+      "ChatGPT"
+    ],
+    "status": "draft",
+    "version": "v1",
+    "conversation": "https://chatgpt.com/c/69c2fc16-c7c0-83e8-83a5-6c98d71992a1"
+  },
+  "overview": {
+    "project-ecology": "The project ecology is larger than the repository alone. It includes the repository itself, the documentation structure inside it, the Python package layout when applicable, and also external reference materials and registries that help orient people and AI systems working with the project.",
+    "zookeep-relevance": "zookeep should understand both the repository and the surrounding ecology that gives the repository meaning and support."
+  },
+  "repository-features": {
+    "docs-directory": {
+      "basic": "Projects commonly contain a docs/ directory for project documents.",
+      "raw-documents": {
+        "basic": "Documents are typically stored using numbered filenames such as 0000__name-of-document.json, 0001__next-document.json, and so on.",
+        "purpose": "These numbered documents serve as the primary authored source documents.",
+        "ordering": "The numbering provides stable identity and simple ordering."
+      },
+      "projection": {
+        "basic": "There is an aspiration to project raw documents into other views such as spec or reference directories.",
+        "status": "Projection is not yet implemented and should not be assumed."
+      },
+      "historical-note": {
+        "docs-spec-vs-raw": "Historically, some projects used directories like docs/spec directly rather than a raw-plus-projection model.",
+        "ai-dedicated-spaces": "There was also experimentation with giving AI agents dedicated places to write, but that didn't pan out -- the AI would write into them at the start of the project, but never again after that."
+      }
+    },
+    "src-directory": {
+      "basic": "For organized Python projects, source code is typically placed under src/.",
+      "layout": "A package directory exists under src/, containing the project code."
+    },
+    "pyproject-toml": {
+      "basic": "Organized Python package projects typically include a pyproject.toml file.",
+      "purpose": [
+        "Declare project metadata.",
+        "Support packaging and installation.",
+        "Optionally define scripts or entry points."
+      ],
+      "variation": "Some projects define scripts and some do not."
+    },
+    "readme-md": {
+      "potential-presence": "Projects typically include a README.md file.",
+      "purpose": "The README provides a human-facing entry point into the project.",
+      "projections": "The README.md shows up automatically in the github.com project page, but it is also often used to present the PyPI page."
+    },
+    ".gitignore": {
+      "potential-presence": "Projects typically include a .gitignore file.",
+      "docs-role": "If projected documentation directories are generated from raw documents, .gitignore should ignore them.",
+      "dot-files-role": "Most .files represent machine-specific coordinates, and should be listed in .gitignore;  .gitignore, interestingly enough, should NOT be listed in .gitignore",
+      "example-pattern": "A common aspiration is to ignore projected docs outputs while keeping docs/raw tracked."
+    },
+    "registry.json": {
+      "potential-presence": "Projects may include a registry.json file.",
+      "purpose": "The registry.json should only contain relatively addressed pointers to resources within the project."
+    },
+    ".local/": {
+      "basic": "A gitignored directory for site-local, machine-specific data.",
+      "purpose": [
+        "Store machine-specific bindings.",
+        "Cache coordinates of site-local resources, such as pointers to the system registry.",
+        "Record site-specific information about how the project exists on this machine.",
+        "Provide context for tools, LLMs, and humans operating on the project."
+      ],
+      "data-types": {
+        "authoritative": "May include authoritative data about the project as it exists on this specific machine.",
+        "cached": "May include cached or discovered data derived from other sources, which may become stale."
+      },
+      "permission": "This data may be created and modified by tools, humans, and LLM agents."
+    },
+    "dot-file-directories": {
+      ".focus-explorer": "This indicates that focus-explorer has been in the base directory; It's typically used provide short-cuts and navigability in the ecology of program.",
+      ".pycard": "Means that pycard has been used in the base directory -- a little python program that's like a miniature HyperCard; It is used to create ad-hoc one-off tools.",
+      ".librarian2": "Means that resources are being collected into a library; .librarian2/registry.json might collect pointers to nearby resources; it can also be configured to keep its registry.json file at the base level, which I often do, so that the LLM will see it immediately"
+    }
+  },
+  "ecology-structures": {
+    "registries": {
+      "basic": "Registries describe resources in the project ecology.",
+      "project-registry": {
+        "location": "Typically registry.json in the project root.",
+        "character": "Portable and versioned. Uses relative or shareable references.",
+        "role": "Describes resources that belong to or travel with the project."
+      },
+      "site-registry": {
+        "basic": "The system-wide registry exists outside the project and contains machine-specific resources.",
+        "location": "External to the repository.",
+        "binding": "Projects may include a site-local pointer to this registry within .local/.",
+        "character": "Machine-specific and not versioned.",
+        "role": "Describes resources available on the local machine."
+      },
+      "relationship": {
+        "basic": "Project and site registries are separate and not automatically merged.",
+        "usage": "Tools and users may choose which registry to operate on.",
+        "note": "Future systems may coordinate multiple registries, but this is not assumed."
+      }
+    },
+    "pypi": {
+      "potential-presence": "Often, but not most of the time, Python projects are projected onto PyPI.",
+      "indicators": "a dist/ directory with .whl and/or .tar.gz files in it"
+    },
+    "json-standards-documents": {
+      "basic": "Projects may rely on coding standards for JSON documents.",
+      "discovery": "These standards are typically located through registry.json rather than assumed to live in a fixed path inside the repository.",
+      "importance": "These standards help both people and AI systems write project documents in a recognizable and consistent style.",
+      "key-document-ids": {
+        "lions-docs.description.json-document-format-for-llms.minimal.v1": "the core, minimal, and typically sufficient description of how to structure documents",
+        "lions-docs.description.json-document-format-for-llms.v1": "a full version -- typically far more detail than is needed"
+      }
+    },
+    "personal-dictionary": {
+      "potential-presence": "The project ecology may include a personal dictionary or vocabulary resource.",
+      "discovery": "This resource is also typically found through registry.json.",
+      "loading-policy": "It should not be automatically loaded by default.",
+      "reason": "The dictionary is a useful reference resource, but not something that should be pulled into every operation automatically."
+    }
+  },
+  "inspection-relevance": {
+    "principle": "When zookeep inspects a project, it should not only inspect the repository directory itself. It should also inspect whether the surrounding ecology is connected and legible.",
+    "registry-check": "Given a configured registry location, zookeep should be able to inspect the registry and determine whether it contains the core referenced resources needed by the project ecology.",
+    "identity-check": "Core external resources should be identified by stable identifiers, and zookeep should verify whether those identifiers are present in the registry."
+  }
+}

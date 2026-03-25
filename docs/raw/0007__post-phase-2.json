@@ -1,0 +1,172 @@
+{
+  "document": {
+    "document-id": "zookeep.implementation.post-phase-2",
+    "title": "Zookeep Post Phase 2 Implementation Directions",
+    "tags": [
+      "zookeep",
+      "implementation",
+      "planning",
+      "next-steps",
+      "evolution"
+    ],
+    "purpose": "Capture the possible next implementation directions for zookeep after phase 2, including their ordering, benefits, risks, and impact.",
+    "author": [
+      "Lion Kimbro",
+      "ChatGPT"
+    ],
+    "status": "draft",
+    "version": "v1"
+  },
+
+  "overview": {
+    "basic": "After Phase 2, zookeep has crossed a major threshold: it can inspect, initialize, and publish repositories. The next steps determine how it evolves from a useful tool into a coherent system.",
+    "principle": "Prefer steps that support real usage and reduce friction over steps that attempt to perfect the system in advance."
+  },
+
+  "recommended-ordering": [
+    "project-definition-entry",
+    "code-structure-refactor",
+    "light-repo-typing",
+    "real-world-usage-feedback",
+    "document-projection",
+    "normalization-system"
+  ],
+
+  "directions": {
+    "project-definition-entry": {
+      "basic": "Introduce a command to create and edit zoo-project.json.",
+      "examples": [
+        "zookeep init-project",
+        "zookeep edit-project"
+      ],
+      "description": "Provide a minimal interface (CLI or simple GUI) to create and update zoo-project.json.",
+      "positives": [
+        "Reduces friction when starting new projects.",
+        "Completes the identity layer of the system.",
+        "Immediately useful in real workflows.",
+        "Feeds existing commands such as init-git and publish-github."
+      ],
+      "negatives": [
+        "Risk of over-designing the schema too early.",
+        "Potential temptation to add too many fields."
+      ],
+      "constraints": [
+        "Must remain optional.",
+        "Must remain lightweight.",
+        "Must not block other commands."
+      ],
+      "impact": "Makes zookeep significantly more useful during project creation and reinforces the habit of using it as the first step."
+    },
+
+    "code-structure-refactor": {
+      "basic": "Split zookeep into multiple files based on command responsibilities.",
+      "description": "Separate command logic into modules such as cmd_inspect, cmd_init_git, and cmd_publish_github.",
+      "positives": [
+        "Improves maintainability.",
+        "Reduces cognitive load when modifying code.",
+        "Prepares the system for additional commands."
+      ],
+      "negatives": [
+        "Does not directly add new functionality.",
+        "May introduce minor friction during refactor."
+      ],
+      "constraints": [
+        "Keep structure simple.",
+        "Avoid over-architecting."
+      ],
+      "impact": "Stabilizes the codebase and prevents future entanglement as features grow."
+    },
+
+    "light-repo-typing": {
+      "basic": "Begin using repo-type to guide light behavior.",
+      "description": "Allow zoo-project.json to specify a repo-type, influencing minor behaviors such as .gitignore templates.",
+      "positives": [
+        "Introduces structure without heavy enforcement.",
+        "Allows gradual emergence of repository patterns.",
+        "Provides a foundation for future normalization."
+      ],
+      "negatives": [
+        "Risk of premature classification.",
+        "May encourage over-generalization."
+      ],
+      "constraints": [
+        "No enforcement.",
+        "No strict validation.",
+        "Only light influence on behavior."
+      ],
+      "impact": "Begins shaping the concept of repository 'breeds' without locking the system into rigid definitions."
+    },
+
+    "real-world-usage-feedback": {
+      "basic": "Use zookeep in real project creation workflows.",
+      "description": "Apply zookeep to new projects and observe friction, gaps, and opportunities.",
+      "positives": [
+        "Grounds future development in actual use.",
+        "Reveals missing features organically.",
+        "Prevents over-design."
+      ],
+      "negatives": [
+        "May expose rough edges.",
+        "Requires discipline to observe rather than immediately fix."
+      ],
+      "constraints": [
+        "Do not interrupt flow with premature feature additions.",
+        "Capture observations for later refinement."
+      ],
+      "impact": "Ensures that future features are driven by real needs rather than speculation."
+    },
+
+    "document-projection": {
+      "basic": "Implement projection from docs/raw into structured views.",
+      "description": "Develop a system to derive projected documentation (e.g., spec or reference views) from raw documents.",
+      "positives": [
+        "Realizes a core vision of the documentation system.",
+        "Improves document organization and accessibility."
+      ],
+      "negatives": [
+        "High design complexity.",
+        "Requires decisions about tagging, typing, and projection rules.",
+        "Not immediately necessary for current workflows."
+      ],
+      "constraints": [
+        "Should not be attempted without sufficient real-world document usage.",
+        "Must avoid premature generalization."
+      ],
+      "impact": "Unlocks a powerful documentation system but should be deferred until patterns are clear."
+    },
+
+    "normalization-system": {
+      "basic": "Introduce commands to bring repositories into a 'healthy' state.",
+      "description": "Commands such as normalize or normalize-X that adjust repository structure to meet expected standards.",
+      "positives": [
+        "Encourages consistency across projects.",
+        "Can automate repetitive cleanup tasks."
+      ],
+      "negatives": [
+        "High risk of overreach and rigidity.",
+        "May enforce incorrect assumptions.",
+        "Can become complex quickly."
+      ],
+      "constraints": [
+        "Should emerge from observed patterns.",
+        "Must remain optional and non-destructive.",
+        "Should not precede real usage."
+      ],
+      "impact": "Potentially powerful, but dangerous if introduced too early."
+    }
+  },
+
+  "guiding-principles": {
+    "build-from-use": "Prefer features that arise from real usage over theoretical completeness.",
+    "avoid-premature-generalization": "Do not define systems (types, normalization, projection) before they are needed.",
+    "keep-the-loop-tight": "Maintain a fast cycle of idea → implementation → use → feedback.",
+    "separate-concerns": "Keep repository structure, ecology structures, and local bindings distinct.",
+    "explicit-over-magical": "Commands should be clear in intent and behavior, avoiding hidden actions."
+  },
+
+  "next-step-recommendation": {
+    "primary": "project-definition-entry",
+    "secondary": "code-structure-refactor",
+    "note": "These steps provide immediate value while preserving system clarity and momentum."
+  }
+}

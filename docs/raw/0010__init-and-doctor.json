@@ -1,0 +1,168 @@
+{
+  "document": {
+    "document-id": "zookeep.init-and-doctor.spec.v1",
+    "title": "Zookeep Init and Doctor Implementation Spec",
+    "tags": [
+      "spec",
+      "addition",
+      "zookeep",
+      "init",
+      "doctor",
+      "implementation",
+      "cli",
+      "gui",
+      "guid"
+    ],
+    "purpose": "Define the behavior of the zookeep init command (GUI-based) and doctor command, including creation and repair of zoo-project.json with required GUID.",
+    "author": [
+      "Lion Kimbro",
+      "ChatGPT"
+    ],
+    "created": "2026-04-05",
+    "status": "draft",
+    "version": "v1"
+  },
+  "init-command": {
+    "name": "zookeep init",
+    "mode": "GUI only (tkinter)",
+    "purpose": "Create zoo-project.json by prompting the user through a form.",
+    "preconditions": {
+      "zoo-project.json exists": "If zoo-project.json already exists, abort and print message."
+    },
+    "ui": {
+      "type": "tkinter form",
+      "fields": [
+        {
+          "name": "name",
+          "label": "Project Name",
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "repo-type",
+          "label": "Repository Type",
+          "type": "text",
+          "required": true,
+          "default": "python-2026-03"
+        },
+        {
+          "name": "license",
+          "label": "License",
+          "type": "text",
+          "required": true,
+          "default": "CC0-1.0"
+        },
+        {
+          "name": "repository.name",
+          "label": "Repository Name",
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "repository.visibility",
+          "label": "Visibility",
+          "type": "choice",
+          "options": [
+            "public",
+            "private"
+          ],
+          "required": true,
+          "default": "public"
+        }
+      ],
+      "buttons": [
+        "Save",
+        "Cancel"
+      ]
+    },
+    "behavior": {
+      "on-save": [
+        "Generate a GUID (UUID4).",
+        "Create zoo-project.json in current directory.",
+        "Write fields in defined structure.",
+        "Insert 'zookeep-project-guid' as the first key in the file.",
+        "Exit successfully."
+      ],
+      "on-cancel": [
+        "Exit without creating file."
+      ]
+    },
+    "output-file": {
+      "name": "zoo-project.json",
+      "structure": {
+        "zookeep-project-guid": "<generated uuid>",
+        "name": "<user input>",
+        "repo-type": "<user input>",
+        "license": "<user input>",
+        "repository": {
+          "name": "<user input>",
+          "visibility": "<user input>"
+        }
+      },
+      "ordering": [
+        "zookeep-project-guid",
+        "name",
+        "repo-type",
+        "license",
+        "repository"
+      ]
+    },
+    "error-handling": {
+      "file-exists": "If zoo-project.json exists, print message and exit.",
+      "invalid-input": "Do not allow empty required fields."
+    }
+  },
+  "doctor-command": {
+    "name": "zookeep doctor",
+    "purpose": "Inspect and repair basic issues in zoo-project.json.",
+    "preconditions": {
+      "zoo-project.json exists": "If missing, print error and exit."
+    },
+    "behavior": {
+      "checks": [
+        {
+          "name": "guid-present",
+          "description": "Check for presence of 'zookeep-project-guid'."
+        }
+      ],
+      "repairs": [
+        {
+          "condition": "zookeep-project-guid missing",
+          "action": [
+            "Generate UUID4.",
+            "Insert 'zookeep-project-guid' as the first key in the JSON file.",
+            "Rewrite file preserving other fields."
+          ]
+        }
+      ]
+    },
+    "output": {
+      "style": "plain text",
+      "examples": [
+        "GUID present.",
+        "GUID missing. Added new zookeep-project-guid."
+      ]
+    }
+  },
+  "shared-rules": {
+    "guid": {
+      "type": "UUID4 string",
+      "field-name": "zookeep-project-guid",
+      "requirements": [
+        "Must exist in zoo-project.json.",
+        "Must be the first key in the file."
+      ]
+    },
+    "file": {
+      "name": "zoo-project.json",
+      "location": "current working directory"
+    }
+  },
+  "non-goals": [
+    "No CLI init mode in this version.",
+    "No validation of repo-type values.",
+    "No GitHub API interaction in init.",
+    "No M1 entity integration yet.",
+    "No advanced repair beyond GUID insertion."
+  ]
+}

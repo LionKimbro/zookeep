@@ -2,7 +2,10 @@ import datetime
 import json
 import re
 import subprocess
+import tkinter as tk
+import uuid
 from pathlib import Path
+from tkinter import ttk
 
 import lionscliapp as app
 
@@ -64,15 +67,116 @@ related or neighboring rights to this work.
 See https://creativecommons.org/publicdomain/zero/1.0/ for details.
 """
 
+ZOO_PROJECT_FILE = "zoo-project.json"
+ZOO_GUID_KEY = "zookeep-project-guid"
+INIT_FIELD_SPECS = [
+    {
+        "name": "name",
+        "label": "Project Name",
+        "kind": "entry",
+        "default": "",
+        "required": True,
+    },
+    {
+        "name": "repo-type",
+        "label": "Repository Type",
+        "kind": "entry",
+        "default": "python-2026-03",
+        "required": True,
+    },
+    {
+        "name": "license",
+        "label": "License",
+        "kind": "entry",
+        "default": "CC0-1.0",
+        "required": True,
+    },
+    {
+        "name": "repository.name",
+        "label": "Repository Name",
+        "kind": "entry",
+        "default": "",
+        "required": True,
+    },
+    {
+        "name": "repository.visibility",
+        "label": "Visibility",
+        "kind": "choice",
+        "choices": ["public", "private"],
+        "default": "public",
+        "required": True,
+    },
+]
+
 
 # -- zoo-project.json --
 
+def get_project_root():
+    return app.get_path("zookeeper-report.json", "e").parent
+
+
+def get_zoo_project_path(root):
+    return root / ZOO_PROJECT_FILE
+
+
+def has_zoo_project(root):
+    return get_zoo_project_path(root).is_file()
+
+
 def read_zoo_project(root):
     """Read zoo-project.json if present; return dict or empty dict."""
-    p = root / "zoo-project.json"
-    if not p.is_file():
+    path = get_zoo_project_path(root)
+    if not path.is_file():
         return {}
-    return json.loads(p.read_text(encoding="utf-8"))
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def write_text_atomic(path, text):
+    """Atomically replace a text file with UTF-8 content."""
+    temp_path = path.with_name(path.name + ".tmp")
+    temp_path.write_text(text, encoding="utf-8")
+    temp_path.replace(path)
+
+
+def make_zoo_project_with_guid_first(zoo, guid=None):
+    """Return zoo-project data with the GUID field first."""
+    guid_value = guid or zoo.get(ZOO_GUID_KEY) or str(uuid.uuid4())
+    updated = {ZOO_GUID_KEY: guid_value}
+    for key, value in zoo.items():
+        if key != ZOO_GUID_KEY:
+            updated[key] = value
+    return updated
+
+
+def write_zoo_project(root, zoo):
+    """Write zoo-project.json with stable formatting and GUID first."""
+    path = get_zoo_project_path(root)
+    prepared = make_zoo_project_with_guid_first(zoo)
+    text = json.dumps(prepared, indent=2) + "\n"
+    write_text_atomic(path, text)
+
+
+def make_init_zoo_project(form_data):
+    """Normalize GUI form data into canonical zoo-project content."""
+    return {
+        "name": form_data["name"],
+        "repo-type": form_data["repo-type"],
+        "license": form_data["license"],
+        "repository": {
+            "name": form_data["repository.name"],
+            "visibility": form_data["repository.visibility"],
+        },
+    }
+
+
+def zoo_project_has_guid(zoo):
+    return ZOO_GUID_KEY in zoo
+
+
+def zoo_project_guid_is_first(zoo):
+    if not zoo_project_has_guid(zoo):
+        return False
+    return next(iter(zoo)) == ZOO_GUID_KEY
 
 
 def get_repo_name(root, zoo):
@@ -123,11 +227,29 @@ def inspect_dot_directories(root):
     return {name: (root / name).is_dir() for name in names}
 
 
+def inspect_zoo_project(root):
+    if not has_zoo_project(root):
+        return {
+            "exists": False,
+            "has-guid": False,
+            "guid-is-first": False,
+        }
+
+    zoo = read_zoo_project(root)
+    return {
+        "exists": True,
+        "has-guid": zoo_project_has_guid(zoo),
+        "guid-is-first": zoo_project_guid_is_first(zoo),
+    }
+
+
 def inspect_git(root):
     try:
         subprocess.run(
             ["git", "rev-parse", "--git-dir"],
-            cwd=root, capture_output=True, check=True
+            cwd=root,
+            capture_output=True,
+            check=True,
         )
     except (subprocess.CalledProcessError, FileNotFoundError):
         return {"is-repo": False, "has-upstream": False, "has-github-upstream": False}
@@ -135,54 +257,62 @@ def inspect_git(root):
     try:
         result = subprocess.run(
             ["git", "remote", "get-url", "origin"],
-            cwd=root, capture_output=True, text=True, check=True
+            cwd=root,
+            capture_output=True,
+            text=True,
+            check=True,
         )
         upstream_url = result.stdout.strip()
     except subprocess.CalledProcessError:
         return {"is-repo": True, "has-upstream": False, "has-github-upstream": False}
 
     has_github = "github.com" in upstream_url
-    return {"is-repo": True, "has-upstream": True, "has-github-upstream": has_github, "upstream-url": upstream_url}
+    return {
+        "is-repo": True,
+        "has-upstream": True,
+        "has-github-upstream": has_github,
+        "upstream-url": upstream_url,
+    }
 
 
 def inspect_registry():
     registry_path_str = app.ctx["registry.path"]
     if not registry_path_str:
         return {"configured": False, "exists": False}
-    p = Path(registry_path_str).expanduser().resolve()
-    return {"configured": True, "exists": p.is_file()}
+    path = Path(registry_path_str).expanduser().resolve()
+    return {"configured": True, "exists": path.is_file()}
 
 
 # -- init-git helpers --
 
 def create_gitignore_if_missing(root):
-    p = root / ".gitignore"
-    if not p.is_file():
-        p.write_text(DEFAULT_GITIGNORE, encoding="utf-8")
+    path = root / ".gitignore"
+    if not path.is_file():
+        path.write_text(DEFAULT_GITIGNORE, encoding="utf-8")
         print("Created: .gitignore")
 
 
 def create_readme_if_missing(root, name):
-    p = root / "README.md"
-    if not p.is_file():
-        p.write_text(f"# {name}\n", encoding="utf-8")
+    path = root / "README.md"
+    if not path.is_file():
+        path.write_text(f"# {name}\n", encoding="utf-8")
         print("Created: README.md")
 
 
 def create_license_if_missing(root, zoo):
-    p = root / "LICENSE"
-    if p.is_file():
+    path = root / "LICENSE"
+    if path.is_file():
         return
     license_id = zoo.get("license", "")
     if not license_id:
         return
     year = datetime.date.today().year
     if license_id == "CC0-1.0":
-        p.write_text(LICENSE_CC0, encoding="utf-8")
+        path.write_text(LICENSE_CC0, encoding="utf-8")
         print("Created: LICENSE (CC0-1.0)")
     elif license_id == "MIT":
         author = get_git_user_name(root)
-        p.write_text(LICENSE_MIT.format(year=year, author=author), encoding="utf-8")
+        path.write_text(LICENSE_MIT.format(year=year, author=author), encoding="utf-8")
         print(f"Created: LICENSE (MIT, {year} {author})")
     else:
         print(f"Warning: unknown license '{license_id}' -- LICENSE not created.")
@@ -192,7 +322,10 @@ def get_git_user_name(root):
     try:
         result = subprocess.run(
             ["git", "config", "user.name"],
-            cwd=root, capture_output=True, text=True, check=True
+            cwd=root,
+            capture_output=True,
+            text=True,
+            check=True,
         )
         return result.stdout.strip() or "Unknown Author"
     except subprocess.CalledProcessError:
@@ -203,17 +336,133 @@ def is_git_repo(root):
     try:
         subprocess.run(
             ["git", "rev-parse", "--git-dir"],
-            cwd=root, capture_output=True, check=True
+            cwd=root,
+            capture_output=True,
+            check=True,
         )
         return True
     except (subprocess.CalledProcessError, FileNotFoundError):
         return False
 
 
+# -- init ui --
+
+def show_init_form(root_path):
+    """Open the tkinter init form and return normalized form data or None."""
+    state = {"values": None}
+    window = tk.Tk()
+    window.title(f"zookeep init - {root_path.name}")
+    window.resizable(False, False)
+
+    frame = ttk.Frame(window, padding=16)
+    frame.grid(row=0, column=0, sticky="nsew")
+
+    widgets = {}
+    message_var = tk.StringVar(value="")
+
+    for row, spec in enumerate(INIT_FIELD_SPECS):
+        ttk.Label(frame, text=spec["label"]).grid(
+            row=row,
+            column=0,
+            sticky="w",
+            padx=(0, 12),
+            pady=6,
+        )
+        value_var = tk.StringVar(value=spec["default"])
+        if spec["kind"] == "choice":
+            widget = ttk.Combobox(
+                frame,
+                textvariable=value_var,
+                values=spec["choices"],
+                state="readonly",
+                width=24,
+            )
+        else:
+            widget = ttk.Entry(frame, textvariable=value_var, width=28)
+        widget.grid(row=row, column=1, sticky="ew", pady=6)
+        widgets[spec["name"]] = {
+            "spec": spec,
+            "widget": widget,
+            "var": value_var,
+        }
+
+    def handle_cancel():
+        window.destroy()
+
+    def handle_save():
+        form_data = {}
+        for name, info in widgets.items():
+            value = info["var"].get().strip()
+            if info["spec"]["required"] and not value:
+                message_var.set(f"{info['spec']['label']} is required.")
+                info["widget"].focus_set()
+                return
+            form_data[name] = value
+        state["values"] = form_data
+        window.destroy()
+
+    button_row = len(INIT_FIELD_SPECS)
+    ttk.Label(frame, textvariable=message_var, foreground="#8b0000").grid(
+        row=button_row,
+        column=0,
+        columnspan=2,
+        sticky="w",
+        pady=(6, 0),
+    )
+    buttons = ttk.Frame(frame)
+    buttons.grid(row=button_row + 1, column=0, columnspan=2, sticky="e", pady=(12, 0))
+    ttk.Button(buttons, text="Save", command=handle_save).grid(row=0, column=0, padx=(0, 8))
+    ttk.Button(buttons, text="Cancel", command=handle_cancel).grid(row=0, column=1)
+
+    widgets["name"]["widget"].focus_set()
+    window.protocol("WM_DELETE_WINDOW", handle_cancel)
+    window.mainloop()
+    return state["values"]
+
+
 # -- commands --
 
+def cmd_init():
+    root = get_project_root()
+
+    if has_zoo_project(root):
+        print("zoo-project.json already exists.")
+        return
+
+    form_data = show_init_form(root)
+    if form_data is None:
+        print("Cancelled.")
+        return
+
+    zoo = make_init_zoo_project(form_data)
+    write_zoo_project(root, zoo)
+    print(f"Created: {get_zoo_project_path(root)}")
+
+
+def cmd_doctor():
+    root = get_project_root()
+
+    if not has_zoo_project(root):
+        print("zoo-project.json is missing.")
+        return
+
+    zoo = read_zoo_project(root)
+
+    if not zoo_project_has_guid(zoo):
+        write_zoo_project(root, zoo)
+        print("GUID missing. Added new zookeep-project-guid.")
+        return
+
+    if not zoo_project_guid_is_first(zoo):
+        write_zoo_project(root, zoo)
+        print("GUID present. Moved zookeep-project-guid to first key.")
+        return
+
+    print("GUID present.")
+
+
 def cmd_clean():
-    root = app.get_path("zookeeper-report.json", "e").parent
+    root = get_project_root()
     report_path = root / "zookeeper-report.json"
     if report_path.exists():
         report_path.unlink()
@@ -223,11 +472,12 @@ def cmd_clean():
 
 
 def cmd_inspect():
-    root = app.get_path("zookeeper-report.json", "e").parent
+    root = get_project_root()
 
     report = {
         "project-root": str(root),
         "repository": inspect_repository(root),
+        "zoo-project": inspect_zoo_project(root),
         "git": inspect_git(root),
         "docs": inspect_docs(root),
         "gitignore": inspect_gitignore(root),
@@ -242,7 +492,7 @@ def cmd_inspect():
 
 
 def cmd_init_git():
-    root = app.get_path("zookeeper-report.json", "e").parent
+    root = get_project_root()
     zoo = read_zoo_project(root)
     name = get_repo_name(root, zoo)
 
@@ -259,7 +509,8 @@ def cmd_init_git():
     subprocess.run(["git", "add", "."], cwd=root, check=True)
     result = subprocess.run(
         ["git", "diff", "--cached", "--quiet"],
-        cwd=root, capture_output=True
+        cwd=root,
+        capture_output=True,
     )
     if result.returncode != 0:
         subprocess.run(["git", "commit", "-m", "Initial commit"], cwd=root, check=True)
@@ -269,7 +520,7 @@ def cmd_init_git():
 
 
 def cmd_publish_github():
-    root = app.get_path("zookeeper-report.json", "e").parent
+    root = get_project_root()
 
     if not is_git_repo(root):
         print("No git repository found. Run 'zookeep init-git' first.")
@@ -284,7 +535,7 @@ def cmd_publish_github():
     try:
         result = subprocess.run(
             ["gh", "repo", "create", name, flag, "--source=.", "--remote=origin", "--push"],
-            cwd=root
+            cwd=root,
         )
     except FileNotFoundError:
         print("'gh' CLI not found. Install it from https://cli.github.com/ and try again.")
@@ -305,6 +556,12 @@ def _setup():
 
     app.declare_key("registry.path", "")
     app.describe_key("registry.path", "Path to registry.json (leave empty if unused).")
+
+    app.declare_cmd("init", cmd_init)
+    app.describe_cmd("init", "Create zoo-project.json through a tkinter form.")
+
+    app.declare_cmd("doctor", cmd_doctor)
+    app.describe_cmd("doctor", "Inspect zoo-project.json and repair a missing or misplaced GUID.")
 
     app.declare_cmd("clean", cmd_clean)
     app.describe_cmd("clean", "Remove zookeep-generated artifacts (zookeeper-report.json).")

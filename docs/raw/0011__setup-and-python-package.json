@@ -1,0 +1,152 @@
+{
+  "document": {
+    "document-id": "zookeep.setup-and-python-package.spec.v1",
+    "title": "Zookeep Setup and Python Package Implementation Spec",
+    "tags": [
+      "spec",
+      "addition",
+      "zookeep",
+      "setup",
+      "python-package",
+      "init",
+      "doctor",
+      "inspect",
+      "implementation"
+    ],
+    "purpose": "Define the addition of zookeep setup and the python-package field in zoo-project.json, including how init, inspect, and doctor should respond to it.",
+    "author": [
+      "Lion Kimbro",
+      "ChatGPT"
+    ],
+    "created": "2026-04-05",
+    "status": "draft",
+    "version": "v1"
+  },
+  "overview": {
+    "basic": "This addition extends zookeep from project identification into lightweight project scaffolding.",
+    "focus": [
+      "Capture the Python package name in zoo-project.json.",
+      "Create standard directories through a setup command.",
+      "Make inspect and doctor aware of missing Python package information."
+    ],
+    "constraint": "Behavior should remain explicit, lightweight, and easy to repair by hand."
+  },
+  "zoo-project-json-addition": {
+    "field": {
+      "name": "python-package",
+      "type": "object",
+      "required": false,
+      "description": "Describe the Python package associated with the repository when the repo-type is python-2026-03.",
+      "fields": {
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "required": false,
+          "description": "The package folder name that should live under src/."
+        }
+      }
+    },
+    "usage-rule": {
+      "python-2026-03": "The field should exist for python-2026-03 repositories. If the package name is not yet known, doctor may infer it from an existing src package or create it with name set to null."
+    }
+  },
+  "init-command": {
+    "name": "zookeep init",
+    "addition": "Prompt for python-package.name in the tkinter form.",
+    "ui": {
+      "new-field": {
+        "name": "python-package.name",
+        "label": "Python Package Name",
+        "type": "text",
+        "required": true
+      }
+    },
+    "output-file": {
+      "new-structure-fragment": {
+        "python-package": {
+          "name": "<user input>"
+        }
+      }
+    }
+  },
+  "setup-command": {
+    "name": "zookeep setup",
+    "purpose": "Create lightweight standard project folders based on zoo-project.json.",
+    "behavior": [
+      "Create docs/ if missing.",
+      "Create docs/raw/ if missing.",
+      "If repo-type is python-2026-03 and python-package.name is present, create src/<python-package-name>/.",
+      "If repo-type is python-2026-03 and python-package.name is present, create src/<python-package-name>/__init__.py if missing.",
+      "If python-package.name is missing for a python-2026-03 repository, do not create the package directory and print a message asking the user to update zoo-project.json."
+    ],
+    "character": [
+      "Safe to run repeatedly.",
+      "Creates directories only.",
+      "Does not overwrite user-authored files."
+    ]
+  },
+  "inspect-command": {
+    "name": "zookeep inspect",
+    "addition": "Report python-package requirements and presence.",
+    "checks": [
+      {
+        "name": "python-package-required",
+        "description": "Whether the current repo-type requires python-package information."
+      },
+      {
+        "name": "has-python-package-name",
+        "description": "Whether python-package.name is present and non-empty."
+      },
+      {
+        "name": "python-package-name",
+        "description": "The current package name value, or null if absent."
+      }
+    ]
+  },
+  "doctor-command": {
+    "name": "zookeep doctor",
+    "addition": "Repair missing python-package information for python-2026-03 repositories.",
+    "checks": [
+      {
+        "name": "python-package-name-present",
+        "description": "Check whether python-package.name exists for python-2026-03 repositories."
+      }
+    ],
+    "repairs": [
+      {
+        "condition": "repo-type is python-2026-03 and python-package.name is missing",
+        "action": [
+          "Inspect src/ for package directories containing Python code.",
+          "If exactly one candidate exists, set python-package.name to that directory name.",
+          "Otherwise, ensure python-package exists and set python-package.name to null.",
+          "Rewrite zoo-project.json preserving other fields.",
+          "If the name could not be inferred unambiguously, print a message requesting that the user update the file."
+        ]
+      }
+    ],
+    "example-output": [
+      "python-package.name missing. Repaired from existing src/my_package package.",
+      "python-package.name missing. Added null placeholder. Please update zoo-project.json."
+    ]
+  },
+  "shared-rules": {
+    "directory-layout": {
+      "docs": "docs/",
+      "raw-docs": "docs/raw/",
+      "python-package": "src/<python-package-name>/ for python-2026-03 repos when the name is known"
+    },
+    "repair-philosophy": [
+      "Doctor may add placeholders.",
+      "Doctor should prefer an already-existing src package when the evidence is clear.",
+      "Doctor should not invent a package name when the evidence is unclear.",
+      "The user remains responsible for choosing the real package name."
+    ]
+  },
+  "non-goals": [
+    "No validation of Python package naming rules in this version.",
+    "No file creation inside the package directory beyond __init__.py.",
+    "No repo-type-specific scaffolding beyond docs/raw and src/<package>."
+  ]
+}

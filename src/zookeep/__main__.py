@@ -106,6 +106,13 @@ INIT_FIELD_SPECS = [
         "default": "public",
         "required": True,
     },
+    {
+        "name": "python-package.name",
+        "label": "Python Package Name",
+        "kind": "entry",
+        "default": "",
+        "required": True,
+    },
 ]
 
 
@@ -166,6 +173,9 @@ def make_init_zoo_project(form_data):
             "name": form_data["repository.name"],
             "visibility": form_data["repository.visibility"],
         },
+        "python-package": {
+            "name": form_data["python-package.name"],
+        },
     }
 
 
@@ -177,6 +187,58 @@ def zoo_project_guid_is_first(zoo):
     if not zoo_project_has_guid(zoo):
         return False
     return next(iter(zoo)) == ZOO_GUID_KEY
+
+
+def repo_type_requires_python_package(zoo):
+    return zoo.get("repo-type") == "python-2026-03"
+
+
+def get_python_package_name(zoo):
+    python_package = zoo.get("python-package")
+    if not isinstance(python_package, dict):
+        return None
+    name = python_package.get("name")
+    if not isinstance(name, str):
+        return None
+    name = name.strip()
+    if not name:
+        return None
+    return name
+
+
+def zoo_project_has_python_package_name(zoo):
+    return get_python_package_name(zoo) is not None
+
+
+def ensure_python_package_placeholder(zoo):
+    python_package = zoo.get("python-package")
+    if not isinstance(python_package, dict):
+        zoo["python-package"] = {"name": None}
+        return True
+
+    if "name" not in python_package or python_package["name"] == "":
+        python_package["name"] = None
+        return True
+
+    return False
+
+
+def directory_contains_python_code(path):
+    if not path.is_dir():
+        return False
+    return any(child.is_file() and child.suffix == ".py" for child in path.rglob("*.py"))
+
+
+def find_python_package_candidates(root):
+    src_dir = root / "src"
+    if not src_dir.is_dir():
+        return []
+
+    candidates = []
+    for child in sorted(src_dir.iterdir(), key=lambda p: p.name):
+        if directory_contains_python_code(child):
+            candidates.append(child.name)
+    return candidates
 
 
 def get_repo_name(root, zoo):
@@ -194,6 +256,7 @@ def get_repo_name(root, zoo):
 def inspect_repository(root):
     return {
         "docs": (root / "docs").is_dir(),
+        "docs/raw": (root / "docs" / "raw").is_dir(),
         "src": (root / "src").is_dir(),
         "pyproject.toml": (root / "pyproject.toml").is_file(),
         "README.md": (root / "README.md").is_file(),
@@ -233,13 +296,20 @@ def inspect_zoo_project(root):
             "exists": False,
             "has-guid": False,
             "guid-is-first": False,
+            "python-package-required": False,
+            "has-python-package-name": False,
+            "python-package-name": None,
         }
 
     zoo = read_zoo_project(root)
+    python_package_required = repo_type_requires_python_package(zoo)
     return {
         "exists": True,
         "has-guid": zoo_project_has_guid(zoo),
         "guid-is-first": zoo_project_guid_is_first(zoo),
+        "python-package-required": python_package_required,
+        "has-python-package-name": zoo_project_has_python_package_name(zoo),
+        "python-package-name": get_python_package_name(zoo),
     }
 
 
@@ -420,6 +490,23 @@ def show_init_form(root_path):
     return state["values"]
 
 
+# -- setup helpers --
+
+def create_directory_if_missing(path):
+    if path.is_dir():
+        return False
+    path.mkdir(parents=True, exist_ok=True)
+    return True
+
+
+def create_file_if_missing(path, text=""):
+    if path.is_file():
+        return False
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
+    return True
+
+
 # -- commands --
 
 def cmd_init():
@@ -447,10 +534,34 @@ def cmd_doctor():
         return
 
     zoo = read_zoo_project(root)
+    messages = []
+    changed = False
 
     if not zoo_project_has_guid(zoo):
+        messages.append("GUID missing. Added new zookeep-project-guid.")
+        changed = True
+
+    if repo_type_requires_python_package(zoo) and not zoo_project_has_python_package_name(zoo):
+        candidates = find_python_package_candidates(root)
+        if len(candidates) == 1:
+            python_package = zoo.get("python-package")
+            if not isinstance(python_package, dict):
+                zoo["python-package"] = {"name": candidates[0]}
+            else:
+                python_package["name"] = candidates[0]
+            messages.append(f"python-package.name missing. Repaired from existing src/{candidates[0]} package.")
+        else:
+            ensure_python_package_placeholder(zoo)
+            if len(candidates) > 1:
+                messages.append("python-package.name missing. Multiple src packages found. Added null placeholder. Please update zoo-project.json.")
+            else:
+                messages.append("python-package.name missing. Added null placeholder. Please update zoo-project.json.")
+        changed = True
+
+    if changed:
         write_zoo_project(root, zoo)
-        print("GUID missing. Added new zookeep-project-guid.")
+        for message in messages:
+            print(message)
         return
 
     if not zoo_project_guid_is_first(zoo):
@@ -459,6 +570,37 @@ def cmd_doctor():
         return
 
     print("GUID present.")
+
+
+def cmd_setup():
+    root = get_project_root()
+    zoo = read_zoo_project(root)
+    created_any = False
+
+    if create_directory_if_missing(root / "docs"):
+        print("Created: docs")
+        created_any = True
+
+    if create_directory_if_missing(root / "docs" / "raw"):
+        print("Created: docs/raw")
+        created_any = True
+
+    if repo_type_requires_python_package(zoo):
+        package_name = get_python_package_name(zoo)
+        if package_name is None:
+            print("python-package.name is missing in zoo-project.json. Update it before creating src package directory.")
+        else:
+            package_path = root / "src" / package_name
+            if create_directory_if_missing(package_path):
+                print(f"Created: src/{package_name}")
+                created_any = True
+            init_path = package_path / "__init__.py"
+            if create_file_if_missing(init_path):
+                print(f"Created: src/{package_name}/__init__.py")
+                created_any = True
+
+    if not created_any:
+        print("Nothing to set up.")
 
 
 def cmd_clean():
@@ -552,7 +694,6 @@ def _setup():
     app.declare_app("zookeep", "0.1")
     app.describe_app("Inspect and tend software project ecologies.")
     app.declare_projectdir(".zookeep")
-    app.set_flag("search_upwards_for_project_dir", True)
 
     app.declare_key("registry.path", "")
     app.describe_key("registry.path", "Path to registry.json (leave empty if unused).")
@@ -561,7 +702,10 @@ def _setup():
     app.describe_cmd("init", "Create zoo-project.json through a tkinter form.")
 
     app.declare_cmd("doctor", cmd_doctor)
-    app.describe_cmd("doctor", "Inspect zoo-project.json and repair a missing or misplaced GUID.")
+    app.describe_cmd("doctor", "Inspect zoo-project.json and repair a missing GUID or python-package placeholder.")
+
+    app.declare_cmd("setup", cmd_setup)
+    app.describe_cmd("setup", "Create docs/raw and repo-type-specific starter directories.")
 
     app.declare_cmd("clean", cmd_clean)
     app.describe_cmd("clean", "Remove zookeep-generated artifacts (zookeeper-report.json).")

@@ -6,5 +6,8 @@
   "repository": {
     "name": "zookeep",
     "visibility": "public"
+  },
+  "python-package": {
+    "name": null
   }
 }

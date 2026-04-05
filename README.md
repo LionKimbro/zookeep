@@ -7,12 +7,15 @@ A system for helping software projects come into being as repositories and keepi
 ```
 zookeep init
 zookeep doctor
+zookeep setup
 zookeep inspect
 ```
 
-`zookeep init` opens a tkinter form and creates `zoo-project.json` in the current project root.
+`zookeep init` opens a tkinter form and creates `zoo-project.json` in the current project root, including the Python package name.
 
-`zookeep doctor` checks `zoo-project.json` and repairs a missing `zookeep-project-guid`, ensuring it is the first key in the file.
+`zookeep doctor` checks `zoo-project.json`, repairs a missing `zookeep-project-guid`, and for `python-2026-03` repos adds a `python-package.name: null` placeholder if that field is missing.
+
+`zookeep setup` creates `docs/`, `docs/raw/`, and for `python-2026-03` repos creates `src/<python-package-name>/` when the package name is known.
 
 `zookeep inspect` inspects the current project ecology and writes `zookeeper-report.json` to the project root.
 

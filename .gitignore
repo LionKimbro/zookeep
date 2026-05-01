@@ -9,3 +9,4 @@ build/
 venv/
 .venv/
 zookeeper-report.json
+.focus-explorer/

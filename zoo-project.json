@@ -7,7 +7,15 @@
     "name": "zookeep",
     "visibility": "public"
   },
-  "python-package": {
-    "name": null
+  "python": {
+    "distribution": {
+      "name": "zookeep"
+    },
+    "import-packages": [
+      {
+        "name": "zookeep",
+        "path": "src/zookeep"
+      }
+    ]
   }
 }

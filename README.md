@@ -5,17 +5,20 @@ A system for helping software projects come into being as repositories and keepi
 ## Usage
 
 ```
-zookeep init
+zookeep spec
 zookeep doctor
+zookeep doctor-pyproject
 zookeep setup
 zookeep inspect
 ```
 
-`zookeep init` opens a tkinter form and creates `zoo-project.json` in the current project root, including the Python package name.
+`zookeep spec` opens a tkinter form that creates or edits `zoo-project.json` in the current project root. Existing values are prefilled. For Python repositories it separately records the distribution name used by `pip install` and the primary import-package name used by `import`.
 
-`zookeep doctor` checks `zoo-project.json`, repairs a missing `zookeep-project-guid`, and for `python-2026-03` repos adds a `python-package.name: null` placeholder if that field is missing.
+`zookeep doctor` checks `zoo-project.json`, repairs a missing `zookeep-project-guid`, and migrates legacy `python-package.name` data into explicit `python.distribution` and `python.import-packages` metadata.
 
-`zookeep setup` creates `docs/`, `docs/raw/`, and for `python-2026-03` repos creates `src/<python-package-name>/` when the package name is known.
+`zookeep doctor-pyproject` creates a minimal setuptools/src-layout `pyproject.toml` when it is absent. When it already exists, the command preserves its content and changes only `[project].name` when needed to match `python.distribution.name` in `zoo-project.json`.
+
+`zookeep setup` creates `docs/`, `docs/raw/`, and the paths listed by `python.import-packages` for `python-2026-03` repositories.
 
 `zookeep inspect` inspects the current project ecology and writes `zookeeper-report.json` to the project root.
 

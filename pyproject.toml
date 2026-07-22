@@ -13,6 +13,7 @@ authors = [
 license = {text = "CC0-1.0"}
 dependencies = [
     "lionscliapp",
+    "tomlkit>=0.13",
 ]
 
 [project.scripts]

@@ -1,0 +1,349 @@
+{
+  "document": {
+    "document-id": "zookeep.zoo-project-file.spec.v2",
+    "title": "Zoo Project File SoftSpec",
+    "tags": [
+      "zookeep",
+      "zoo-project",
+      "spec",
+      "softspec",
+      "configuration",
+      "identity"
+    ],
+    "purpose": "Describe the canonical structure and operational role of zoo-project.json as currently authored and maintained by zookeep.",
+    "author": [
+      "Lion Kimbro",
+      "Codex"
+    ],
+    "created": "2026-07-22",
+    "updated": "2026-07-22",
+    "status": "draft",
+    "version": "v2",
+    "depends-on": [
+      "softspec.spec.v3"
+    ],
+    "supersedes": "zookeep.zoo-project-file.spec.v1"
+  },
+  "overview": {
+    "basic": "zoo-project.json records a project's identity, repository identity, repository kind, licensing preference, hosting preference, and repo-type-specific metadata. Python distribution names and import-package names are separate concepts and are recorded separately.",
+    "location": "The project repository root.",
+    "character": [
+      "Portable, versioned, human-readable JSON.",
+      "Advisory data for zookeep and related tools rather than a rigid validation boundary.",
+      "Extensible: tools should preserve unfamiliar keys when rewriting the file."
+    ],
+    "presence": "The file is optional for general repository operation. Commands that create, inspect, repair, set up, or publish a zookeep project may require it or behave differently when it is absent."
+  },
+  "format-basis": {
+    "historical-source": [
+      "The output structure defined by zookeep.init-and-doctor.spec.v1.",
+      "The legacy python-package addition defined by zookeep.setup-and-python-package.spec.v1."
+    ],
+    "canonical-source": "The current zookeep spec and doctor implementation.",
+    "legacy-migration": "Older zoo-project.json files may omit zookeep-project-guid or use python-package.name. Doctor adds a generated GUID when needed, obtains the Python distribution name from pyproject.toml when possible, obtains an import-package name from the legacy field or an unambiguous src/ directory, writes the explicit python structure, and removes python-package.",
+    "difference-from-v1": [
+      "Adds the canonical zookeep-project-guid field and its first-key ordering rule.",
+      "Replaces the ambiguous python-package structure with separate Python distribution and import-package identities.",
+      "Describes fields authored by current spec as required in canonical output.",
+      "Does not include project-ref because current project specs, implementation, and authored files do not use it.",
+      "Corrects the project-name description: current code requires a non-empty value but does not enforce the v1 acceptance-regex.",
+      "Uses the SoftSpec v3 wrapper, schema definition, object keys, constraints, vocabulary, and data-dictionary forms."
+    ]
+  },
+  "spec-editor": {
+    "command": "zookeep spec",
+    "new-file-behavior": "Open a tkinter form and create zoo-project.json from the entered values.",
+    "existing-file-behavior": "Open the same form with current values prefilled, then update the fields represented by the form.",
+    "preservation": [
+      "Preserve zookeep-project-guid.",
+      "Preserve unknown top-level and nested extension fields.",
+      "Edit the primary Python import-package entry and preserve additional import-package entries."
+    ]
+  },
+  "pyproject-reconciliation": {
+    "command": "zookeep doctor-pyproject",
+    "source-of-truth": "zoo-project.json python.distribution.name",
+    "existing-file-behavior": "Parse pyproject.toml while preserving formatting, comments, and unrelated values. Change only project.name when it differs from python.distribution.name.",
+    "missing-file-behavior": "Create a minimal setuptools pyproject.toml using src-layout discovery, project.name from python.distribution.name, version 0.1.0, and requires-python >=3.10.",
+    "boundary": "Import-package names are represented by python.import-packages and their source paths. They are not inferred from or written to project.name."
+  },
+  "softspec": {
+    "types": {
+      "uuid4-string": {
+        "type": "string",
+        "semantic_type": "uuid-v4",
+        "description": "A UUID version 4 serialized as a string.",
+        "constraints": {
+          "format": "uuid",
+          "version": 4
+        },
+        "examples": [
+          "ba6a7553-6668-4e78-bf0c-760b72892409"
+        ]
+      },
+      "repository-type": {
+        "type": "string",
+        "semantic_type": "zookeep-repository-type",
+        "description": "A repository breed identifier used to select light repo-type-specific behavior.",
+        "constraints": {
+          "min_length": 1
+        },
+        "vocabulary": {
+          "python-2026-03": "A Python repository using the March 2026 project conventions.",
+          "philosophy-discussion-2026-03": "A discussion-oriented repository using the March 2026 project conventions."
+        },
+        "vocabulary_mode": "open",
+        "notes": [
+          "Current spec accepts any non-empty string and does not validate this value against the vocabulary.",
+          "Only python-2026-03 currently triggers repo-type-specific package setup behavior."
+        ]
+      },
+      "repository-visibility": {
+        "type": "string",
+        "semantic_type": "repository-visibility",
+        "description": "Preferred visibility when creating a hosted repository.",
+        "constraints": {
+          "allowed_values": [
+            "public",
+            "private"
+          ]
+        },
+        "vocabulary": {
+          "public": "Create a publicly visible repository.",
+          "private": "Create a private repository."
+        },
+        "vocabulary_mode": "closed"
+      },
+      "python-distribution-name": {
+        "type": "string",
+        "semantic_type": "python-distribution-name",
+        "description": "The Python distribution name used by package indexes and commands such as pip install.",
+        "constraints": {
+          "min_length": 1
+        },
+        "examples": [
+          "aspect-slicer",
+          "Pillow"
+        ]
+      },
+      "python-import-package-name": {
+        "type": "string",
+        "semantic_type": "python-import-package-name",
+        "description": "A name used in a Python import statement. It may differ from the distribution and repository names.",
+        "constraints": {
+          "min_length": 1
+        },
+        "examples": [
+          "aspect_slicer",
+          "PIL"
+        ]
+      },
+      "project-relative-path": {
+        "type": "string",
+        "semantic_type": "project-relative-path",
+        "description": "A forward-slash path relative to the project repository root.",
+        "constraints": {
+          "min_length": 1
+        },
+        "examples": [
+          "src/aspect_slicer",
+          "src/PIL"
+        ]
+      }
+    },
+    "schemas": {
+      "zoo-project-file": {
+        "title": "zoo-project.json",
+        "id": "zookeep.zoo-project-file",
+        "description": "Canonical current content of a zoo-project.json file.",
+        "rules": [
+          "zookeep-project-guid is serialized as the first top-level key.",
+          "Current spec authors every unconditional required field in this schema.",
+          "python should be present when repo-type is python-2026-03.",
+          "python.distribution.name is the distribution identity used by pip and pyproject.toml project.name.",
+          "Each python.import-packages entry identifies an import name independently of the distribution and repository names.",
+          "Unknown top-level and nested keys are allowed and should be preserved by tools that rewrite the file.",
+          "Existing values are advisory unless a command documents a stronger precondition."
+        ],
+        "data-dictionary": {
+          "source_file": "zoo-project.json",
+          "owner": "The project repository",
+          "created_by": "zookeep spec",
+          "updated_by": [
+            "Manual editing",
+            "zookeep doctor"
+          ],
+          "used_by": [
+            "zookeep inspect",
+            "zookeep doctor",
+            "zookeep doctor-pyproject",
+            "zookeep setup",
+            "zookeep init-git",
+            "zookeep publish-github"
+          ],
+          "persistence": "Repository-local, persistent, and normally version-controlled.",
+          "primary_audience": [
+            "Project maintainers",
+            "Zookeep tooling",
+            "LLM coding assistants"
+          ]
+        },
+        "structure": {
+          "type": "object",
+          "keys": {
+            "zookeep-project-guid": {
+              "type": "uuid4-string",
+              "required": true,
+              "description": "Stable zookeep identity for this project. Generated by init or added by doctor if absent.",
+              "data-dictionary": {
+                "created_by": [
+                  "zookeep spec",
+                  "zookeep doctor when the key is absent"
+                ],
+                "updated_by": "Not normally changed after creation.",
+                "used_for": "Identify the project independently of its directory or repository name."
+              }
+            },
+            "name": {
+              "type": "string",
+              "semantic_type": "project-name",
+              "required": true,
+              "description": "Human-chosen project identifier.",
+              "constraints": {
+                "min_length": 1
+              }
+            },
+            "repo-type": {
+              "type": "repository-type",
+              "required": true,
+              "description": "Repository breed used to select light convention-specific behavior."
+            },
+            "license": {
+              "type": "string",
+              "semantic_type": "license-identifier",
+              "required": true,
+              "description": "Preferred license identifier used by tools that generate a LICENSE file.",
+              "constraints": {
+                "min_length": 1
+              },
+              "examples": [
+                "CC0-1.0",
+                "MIT",
+                "Apache-2.0"
+              ]
+            },
+            "repository": {
+              "type": "object",
+              "required": true,
+              "description": "Preferences for repository hosting and publication.",
+              "keys": {
+                "name": {
+                  "type": "string",
+                  "semantic_type": "repository-name",
+                  "required": true,
+                  "description": "Preferred hosted repository name.",
+                  "constraints": {
+                    "min_length": 1
+                  }
+                },
+                "visibility": {
+                  "type": "repository-visibility",
+                  "required": true,
+                  "description": "Preferred visibility for a newly published repository."
+                }
+              },
+              "additional_keys": true
+            },
+            "python": {
+              "type": "object",
+              "required": "when repo-type is 'python-2026-03'",
+              "description": "Explicit Python distribution and import-package identities.",
+              "keys": {
+                "distribution": {
+                  "type": "object",
+                  "required": true,
+                  "description": "The installable Python distribution.",
+                  "keys": {
+                    "name": {
+                      "type": "python-distribution-name",
+                      "required": true,
+                      "description": "Name used by pip install and pyproject.toml project.name."
+                    }
+                  },
+                  "additional_keys": true
+                },
+                "import-packages": {
+                  "type": "array",
+                  "required": true,
+                  "description": "Python packages provided for import by the distribution. A distribution may provide more than one.",
+                  "items": {
+                    "type": "object",
+                    "keys": {
+                      "name": {
+                        "type": "python-import-package-name",
+                        "required": true,
+                        "description": "Name used in an import statement."
+                      },
+                      "path": {
+                        "type": "project-relative-path",
+                        "required": true,
+                        "description": "Repository-relative directory containing the import package."
+                      }
+                    },
+                    "additional_keys": true
+                  }
+                }
+              },
+              "additional_keys": true,
+              "data-dictionary": {
+                "created_by": [
+                  "zookeep spec",
+                  "zookeep doctor while migrating legacy Python metadata"
+                ],
+                "used_by": [
+                  "zookeep inspect",
+                  "zookeep doctor",
+                  "zookeep doctor-pyproject",
+                  "zookeep setup"
+                ],
+                "used_for": "Reconcile pyproject.toml and locate or create import-package directories."
+              }
+            }
+          },
+          "additional_keys": true,
+          "key-order": [
+            "zookeep-project-guid",
+            "name",
+            "repo-type",
+            "license",
+            "repository",
+            "python"
+          ]
+        },
+        "examples": [
+          {
+            "zookeep-project-guid": "ba6a7553-6668-4e78-bf0c-760b72892409",
+            "name": "zookeep",
+            "repo-type": "python-2026-03",
+            "license": "CC0-1.0",
+            "repository": {
+              "name": "zookeep",
+              "visibility": "public"
+            },
+            "python": {
+              "distribution": {
+                "name": "zookeep"
+              },
+              "import-packages": [
+                {
+                  "name": "zookeep",
+                  "path": "src/zookeep"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  }
+}

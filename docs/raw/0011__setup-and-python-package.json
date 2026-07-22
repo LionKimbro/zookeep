@@ -19,8 +19,10 @@
       "ChatGPT"
     ],
     "created": "2026-04-05",
-    "status": "draft",
-    "version": "v1"
+    "status": "deprecated",
+    "version": "v1",
+    "updated": "2026-07-22",
+    "superseded-by": "zookeep.zoo-project-file.spec.v2"
   },
   "overview": {
     "basic": "This addition extends zookeep from project identification into lightweight project scaffolding.",

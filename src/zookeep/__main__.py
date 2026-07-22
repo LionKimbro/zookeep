@@ -4,10 +4,12 @@ import re
 import subprocess
 import tkinter as tk
 import uuid
+from collections.abc import Mapping
 from pathlib import Path
 from tkinter import ttk
 
 import lionscliapp as app
+import tomlkit
 
 
 # -- templates --
@@ -69,7 +71,7 @@ See https://creativecommons.org/publicdomain/zero/1.0/ for details.
 
 ZOO_PROJECT_FILE = "zoo-project.json"
 ZOO_GUID_KEY = "zookeep-project-guid"
-INIT_FIELD_SPECS = [
+SPEC_FIELD_SPECS = [
     {
         "name": "name",
         "label": "Project Name",
@@ -107,8 +109,15 @@ INIT_FIELD_SPECS = [
         "required": True,
     },
     {
-        "name": "python-package.name",
-        "label": "Python Package Name",
+        "name": "python.distribution.name",
+        "label": "Python Distribution Name (pip install)",
+        "kind": "entry",
+        "default": "",
+        "required": True,
+    },
+    {
+        "name": "python.import-package.name",
+        "label": "Primary Python Import Package (import)",
         "kind": "entry",
         "default": "",
         "required": True,
@@ -163,20 +172,53 @@ def write_zoo_project(root, zoo):
     write_text_atomic(path, text)
 
 
-def make_init_zoo_project(form_data):
-    """Normalize GUI form data into canonical zoo-project content."""
+def get_spec_form_values(zoo):
+    repository = zoo.get("repository")
+    if not isinstance(repository, dict):
+        repository = {}
+    primary_import = get_python_import_packages(zoo)
+    primary_import_name = primary_import[0]["name"] if primary_import else ""
     return {
-        "name": form_data["name"],
-        "repo-type": form_data["repo-type"],
-        "license": form_data["license"],
-        "repository": {
-            "name": form_data["repository.name"],
-            "visibility": form_data["repository.visibility"],
-        },
-        "python-package": {
-            "name": form_data["python-package.name"],
-        },
+        "name": zoo.get("name", ""),
+        "repo-type": zoo.get("repo-type", "python-2026-03"),
+        "license": zoo.get("license", "CC0-1.0"),
+        "repository.name": repository.get("name", ""),
+        "repository.visibility": repository.get("visibility", "public"),
+        "python.distribution.name": get_python_distribution_name(zoo) or "",
+        "python.import-package.name": primary_import_name,
     }
+
+
+def make_spec_zoo_project(form_data, existing=None):
+    """Apply GUI form data while preserving identity and unedited extensions."""
+    zoo = dict(existing or {})
+    zoo["name"] = form_data["name"]
+    zoo["repo-type"] = form_data["repo-type"]
+    zoo["license"] = form_data["license"]
+
+    repository = zoo.get("repository")
+    repository = dict(repository) if isinstance(repository, dict) else {}
+    repository["name"] = form_data["repository.name"]
+    repository["visibility"] = form_data["repository.visibility"]
+    zoo["repository"] = repository
+
+    python_config = zoo.get("python")
+    python_config = dict(python_config) if isinstance(python_config, dict) else {}
+    distribution = python_config.get("distribution")
+    distribution = dict(distribution) if isinstance(distribution, dict) else {}
+    distribution["name"] = form_data["python.distribution.name"]
+    python_config["distribution"] = distribution
+
+    existing_packages = python_config.get("import-packages")
+    additional_packages = existing_packages[1:] if isinstance(existing_packages, list) else []
+    primary_name = form_data["python.import-package.name"]
+    python_config["import-packages"] = [
+        make_import_package_record(primary_name),
+        *additional_packages,
+    ]
+    zoo["python"] = python_config
+    zoo.pop("python-package", None)
+    return zoo
 
 
 def zoo_project_has_guid(zoo):
@@ -189,38 +231,54 @@ def zoo_project_guid_is_first(zoo):
     return next(iter(zoo)) == ZOO_GUID_KEY
 
 
-def repo_type_requires_python_package(zoo):
+def repo_type_requires_python(zoo):
     return zoo.get("repo-type") == "python-2026-03"
 
 
-def get_python_package_name(zoo):
+def get_python_distribution_name(zoo):
+    python_config = zoo.get("python")
+    if not isinstance(python_config, dict):
+        return None
+    distribution = python_config.get("distribution")
+    if not isinstance(distribution, dict):
+        return None
+    name = distribution.get("name")
+    if not isinstance(name, str):
+        return None
+    name = name.strip()
+    return name or None
+
+
+def get_python_import_packages(zoo):
+    python_config = zoo.get("python")
+    if not isinstance(python_config, dict):
+        return []
+    packages = python_config.get("import-packages")
+    if not isinstance(packages, list):
+        return []
+
+    normalized = []
+    for package in packages:
+        if not isinstance(package, dict):
+            continue
+        name = package.get("name")
+        path = package.get("path")
+        if not isinstance(name, str) or not name.strip():
+            continue
+        if not isinstance(path, str) or not path.strip():
+            continue
+        normalized.append({"name": name.strip(), "path": path.strip()})
+    return normalized
+
+
+def get_legacy_python_package_name(zoo):
     python_package = zoo.get("python-package")
     if not isinstance(python_package, dict):
         return None
     name = python_package.get("name")
-    if not isinstance(name, str):
+    if not isinstance(name, str) or not name.strip():
         return None
-    name = name.strip()
-    if not name:
-        return None
-    return name
-
-
-def zoo_project_has_python_package_name(zoo):
-    return get_python_package_name(zoo) is not None
-
-
-def ensure_python_package_placeholder(zoo):
-    python_package = zoo.get("python-package")
-    if not isinstance(python_package, dict):
-        zoo["python-package"] = {"name": None}
-        return True
-
-    if "name" not in python_package or python_package["name"] == "":
-        python_package["name"] = None
-        return True
-
-    return False
+    return name.strip()
 
 
 def directory_contains_python_code(path):
@@ -239,6 +297,65 @@ def find_python_package_candidates(root):
         if directory_contains_python_code(child):
             candidates.append(child.name)
     return candidates
+
+
+def read_pyproject_document(root):
+    path = root / "pyproject.toml"
+    if not path.is_file():
+        return None
+    return tomlkit.parse(path.read_text(encoding="utf-8"))
+
+
+def read_pyproject_distribution_name(root):
+    try:
+        document = read_pyproject_document(root)
+    except (OSError, tomlkit.exceptions.ParseError):
+        return None
+    if document is None:
+        return None
+    project = document.get("project")
+    if not isinstance(project, Mapping):
+        return None
+    name = project.get("name")
+    if not isinstance(name, str) or not name.strip():
+        return None
+    return name.strip()
+
+
+def make_import_package_record(name):
+    return {
+        "name": name,
+        "path": f"src/{name.replace('.', '/')}",
+    }
+
+
+def migrate_python_metadata(root, zoo):
+    """Replace legacy python-package metadata with explicit Python identities."""
+    python_config = zoo.get("python")
+    if not isinstance(python_config, dict):
+        python_config = {}
+        zoo["python"] = python_config
+
+    distribution = python_config.get("distribution")
+    if not isinstance(distribution, dict):
+        distribution = {}
+        python_config["distribution"] = distribution
+    if not isinstance(distribution.get("name"), str) or not distribution["name"].strip():
+        distribution["name"] = read_pyproject_distribution_name(root)
+
+    packages = get_python_import_packages(zoo)
+    if not packages:
+        legacy_name = get_legacy_python_package_name(zoo)
+        candidates = find_python_package_candidates(root)
+        inferred_name = legacy_name or (candidates[0] if len(candidates) == 1 else None)
+        packages = [make_import_package_record(inferred_name)] if inferred_name else []
+        python_config["import-packages"] = packages
+
+    zoo.pop("python-package", None)
+    return {
+        "distribution-name": get_python_distribution_name(zoo),
+        "import-packages": get_python_import_packages(zoo),
+    }
 
 
 def get_repo_name(root, zoo):
@@ -296,20 +413,20 @@ def inspect_zoo_project(root):
             "exists": False,
             "has-guid": False,
             "guid-is-first": False,
-            "python-package-required": False,
-            "has-python-package-name": False,
-            "python-package-name": None,
+            "python-required": False,
+            "python-distribution-name": None,
+            "python-import-packages": [],
         }
 
     zoo = read_zoo_project(root)
-    python_package_required = repo_type_requires_python_package(zoo)
+    python_required = repo_type_requires_python(zoo)
     return {
         "exists": True,
         "has-guid": zoo_project_has_guid(zoo),
         "guid-is-first": zoo_project_guid_is_first(zoo),
-        "python-package-required": python_package_required,
-        "has-python-package-name": zoo_project_has_python_package_name(zoo),
-        "python-package-name": get_python_package_name(zoo),
+        "python-required": python_required,
+        "python-distribution-name": get_python_distribution_name(zoo),
+        "python-import-packages": get_python_import_packages(zoo),
     }
 
 
@@ -415,13 +532,13 @@ def is_git_repo(root):
         return False
 
 
-# -- init ui --
+# -- spec editor ui --
 
-def show_init_form(root_path):
-    """Open the tkinter init form and return normalized form data or None."""
+def show_spec_form(root_path, zoo):
+    """Open the tkinter spec editor and return normalized form data or None."""
     state = {"values": None}
     window = tk.Tk()
-    window.title(f"zookeep init - {root_path.name}")
+    window.title(f"zookeep spec - {root_path.name}")
     window.resizable(False, False)
 
     frame = ttk.Frame(window, padding=16)
@@ -429,8 +546,9 @@ def show_init_form(root_path):
 
     widgets = {}
     message_var = tk.StringVar(value="")
+    current_values = get_spec_form_values(zoo)
 
-    for row, spec in enumerate(INIT_FIELD_SPECS):
+    for row, spec in enumerate(SPEC_FIELD_SPECS):
         ttk.Label(frame, text=spec["label"]).grid(
             row=row,
             column=0,
@@ -438,7 +556,7 @@ def show_init_form(root_path):
             padx=(0, 12),
             pady=6,
         )
-        value_var = tk.StringVar(value=spec["default"])
+        value_var = tk.StringVar(value=current_values.get(spec["name"], spec["default"]))
         if spec["kind"] == "choice":
             widget = ttk.Combobox(
                 frame,
@@ -471,7 +589,7 @@ def show_init_form(root_path):
         state["values"] = form_data
         window.destroy()
 
-    button_row = len(INIT_FIELD_SPECS)
+    button_row = len(SPEC_FIELD_SPECS)
     ttk.Label(frame, textvariable=message_var, foreground="#8b0000").grid(
         row=button_row,
         column=0,
@@ -507,23 +625,96 @@ def create_file_if_missing(path, text=""):
     return True
 
 
+# -- pyproject.toml helpers --
+
+def make_minimal_pyproject_document(distribution_name):
+    document = tomlkit.document()
+
+    build_system = tomlkit.table()
+    build_system["requires"] = ["setuptools>=61.0"]
+    build_system["build-backend"] = "setuptools.build_meta"
+    document["build-system"] = build_system
+
+    project = tomlkit.table()
+    project["name"] = distribution_name
+    project["version"] = "0.1.0"
+    project["requires-python"] = ">=3.10"
+    document["project"] = project
+
+    find = tomlkit.table()
+    find["where"] = ["src"]
+    packages = tomlkit.table()
+    packages["find"] = find
+    setuptools = tomlkit.table()
+    setuptools["packages"] = packages
+    tool = tomlkit.table()
+    tool["setuptools"] = setuptools
+    document["tool"] = tool
+    return document
+
+
+def reconcile_pyproject(root, zoo):
+    """Make the smallest TOML change needed to match the distribution name."""
+    distribution_name = get_python_distribution_name(zoo)
+    if distribution_name is None:
+        return {
+            "changed": False,
+            "error": "python.distribution.name is missing in zoo-project.json.",
+        }
+
+    path = root / "pyproject.toml"
+    if not path.is_file():
+        document = make_minimal_pyproject_document(distribution_name)
+        write_text_atomic(path, tomlkit.dumps(document))
+        return {
+            "changed": True,
+            "created": True,
+            "message": "Created minimal pyproject.toml.",
+        }
+
+    try:
+        document = read_pyproject_document(root)
+    except (OSError, tomlkit.exceptions.ParseError) as exc:
+        return {
+            "changed": False,
+            "error": f"Could not parse pyproject.toml: {exc}",
+        }
+
+    project = document.get("project")
+    if not isinstance(project, Mapping):
+        project = tomlkit.table()
+        document["project"] = project
+
+    current_name = project.get("name")
+    if current_name == distribution_name:
+        return {
+            "changed": False,
+            "message": "pyproject.toml already matches zoo-project.json.",
+        }
+
+    project["name"] = distribution_name
+    write_text_atomic(path, tomlkit.dumps(document))
+    return {
+        "changed": True,
+        "created": False,
+        "message": f"Updated pyproject.toml project.name to '{distribution_name}'.",
+    }
+
+
 # -- commands --
 
-def cmd_init():
+def cmd_spec():
     root = get_project_root()
-
-    if has_zoo_project(root):
-        print("zoo-project.json already exists.")
-        return
-
-    form_data = show_init_form(root)
+    existing = read_zoo_project(root) if has_zoo_project(root) else {}
+    form_data = show_spec_form(root, existing)
     if form_data is None:
         print("Cancelled.")
         return
 
-    zoo = make_init_zoo_project(form_data)
+    zoo = make_spec_zoo_project(form_data, existing)
     write_zoo_project(root, zoo)
-    print(f"Created: {get_zoo_project_path(root)}")
+    action = "Updated" if existing else "Created"
+    print(f"{action}: {get_zoo_project_path(root)}")
 
 
 def cmd_doctor():
@@ -541,35 +732,47 @@ def cmd_doctor():
         messages.append("GUID missing. Added new zookeep-project-guid.")
         changed = True
 
-    if repo_type_requires_python_package(zoo) and not zoo_project_has_python_package_name(zoo):
-        candidates = find_python_package_candidates(root)
-        if len(candidates) == 1:
-            python_package = zoo.get("python-package")
-            if not isinstance(python_package, dict):
-                zoo["python-package"] = {"name": candidates[0]}
-            else:
-                python_package["name"] = candidates[0]
-            messages.append(f"python-package.name missing. Repaired from existing src/{candidates[0]} package.")
-        else:
-            ensure_python_package_placeholder(zoo)
-            if len(candidates) > 1:
-                messages.append("python-package.name missing. Multiple src packages found. Added null placeholder. Please update zoo-project.json.")
-            else:
-                messages.append("python-package.name missing. Added null placeholder. Please update zoo-project.json.")
-        changed = True
+    if repo_type_requires_python(zoo):
+        before_python = json.dumps(zoo, sort_keys=True)
+        migration = migrate_python_metadata(root, zoo)
+        if json.dumps(zoo, sort_keys=True) != before_python:
+            changed = True
+            messages.append("Migrated Python metadata to explicit distribution and import-package fields.")
+        if migration["distribution-name"] is None:
+            messages.append("python.distribution.name is unresolved. Update zoo-project.json.")
+        if not migration["import-packages"]:
+            messages.append("python.import-packages is empty. Update zoo-project.json.")
 
     if changed:
         write_zoo_project(root, zoo)
+    elif not zoo_project_guid_is_first(zoo):
+        write_zoo_project(root, zoo)
+        messages.append("GUID present. Moved zookeep-project-guid to first key.")
+
+    if messages:
         for message in messages:
             print(message)
         return
 
-    if not zoo_project_guid_is_first(zoo):
-        write_zoo_project(root, zoo)
-        print("GUID present. Moved zookeep-project-guid to first key.")
+    print("zoo-project.json is healthy.")
+
+
+def cmd_doctor_pyproject():
+    root = get_project_root()
+    if not has_zoo_project(root):
+        print("zoo-project.json is missing.")
         return
 
-    print("GUID present.")
+    zoo = read_zoo_project(root)
+    if not repo_type_requires_python(zoo):
+        print("This repository type does not define Python project metadata.")
+        return
+
+    result = reconcile_pyproject(root, zoo)
+    if result.get("error"):
+        print(result["error"])
+        return
+    print(result["message"])
 
 
 def cmd_setup():
@@ -585,18 +788,21 @@ def cmd_setup():
         print("Created: docs/raw")
         created_any = True
 
-    if repo_type_requires_python_package(zoo):
-        package_name = get_python_package_name(zoo)
-        if package_name is None:
-            print("python-package.name is missing in zoo-project.json. Update it before creating src package directory.")
-        else:
-            package_path = root / "src" / package_name
+    if repo_type_requires_python(zoo):
+        packages = get_python_import_packages(zoo)
+        if not packages:
+            print("python.import-packages is empty in zoo-project.json. Run 'zookeep doctor' or update it before setup.")
+        for package in packages:
+            package_path = (root / package["path"]).resolve()
+            if root.resolve() not in package_path.parents:
+                print(f"Skipped unsafe import-package path: {package['path']}")
+                continue
             if create_directory_if_missing(package_path):
-                print(f"Created: src/{package_name}")
+                print(f"Created: {package['path']}")
                 created_any = True
             init_path = package_path / "__init__.py"
             if create_file_if_missing(init_path):
-                print(f"Created: src/{package_name}/__init__.py")
+                print(f"Created: {package['path']}/__init__.py")
                 created_any = True
 
     if not created_any:
@@ -698,11 +904,14 @@ def _setup():
     app.declare_key("registry.path", "")
     app.describe_key("registry.path", "Path to registry.json (leave empty if unused).")
 
-    app.declare_cmd("init", cmd_init)
-    app.describe_cmd("init", "Create zoo-project.json through a tkinter form.")
+    app.declare_cmd("spec", cmd_spec)
+    app.describe_cmd("spec", "Create or edit zoo-project.json through a tkinter form.")
 
     app.declare_cmd("doctor", cmd_doctor)
-    app.describe_cmd("doctor", "Inspect zoo-project.json and repair a missing GUID or python-package placeholder.")
+    app.describe_cmd("doctor", "Inspect zoo-project.json and migrate or repair project metadata.")
+
+    app.declare_cmd("doctor-pyproject", cmd_doctor_pyproject)
+    app.describe_cmd("doctor-pyproject", "Create or minimally reconcile pyproject.toml with zoo-project.json.")
 
     app.declare_cmd("setup", cmd_setup)
     app.describe_cmd("setup", "Create docs/raw and repo-type-specific starter directories.")

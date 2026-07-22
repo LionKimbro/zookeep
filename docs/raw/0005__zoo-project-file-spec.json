@@ -14,8 +14,10 @@
       "Lion Kimbro",
       "ChatGPT"
     ],
-    "status": "draft",
-    "version": "v1"
+    "status": "deprecated",
+    "version": "v1",
+    "updated": "2026-07-22",
+    "superseded-by": "zookeep.zoo-project-file.spec.v2"
   },
   "overview": {
     "basic": "The zoo-project.json file defines basic identity and preferences for a project. It is optional, human-readable, and designed to assist tools without being required for operation.",

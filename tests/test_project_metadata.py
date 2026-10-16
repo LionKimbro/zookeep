@@ -4,7 +4,7 @@ from pathlib import Path
 
 import tomlkit
 
-from zookeep import __main__ as zookeep
+from zookeep import project as zookeep
 
 
 class ProjectMetadataTests(unittest.TestCase):
